@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1 Billion to 0 — Live Counter</title>
+<style>
+  :root{
+    --bg:#07070d; --panel:#11121c; --panel2:#171827;
+    --red:#ff2b4e; --cyan:#22d3ee; --green:#3ddc84; --amber:#ffb020;
+    --txt:#eef0f6; --muted:#8b8fa3; --line:#242639;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:radial-gradient(1200px 800px at 50% -10%, #1a0f18 0%, var(--bg) 55%);
+    color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:26px 18px 50px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;width:100%;margin:0 auto;text-align:center}
+
+  .topbar{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:4px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .arrow{color:var(--red);font-size:24px;line-height:1;filter:drop-shadow(0 0 10px rgba(255,43,78,.7))}
+  h1{font-size:22px;letter-spacing:.5px;font-weight:800}
+  h1 .z{color:var(--red)}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:1.5px;
+    text-transform:uppercase;padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .badge.live .dot{background:var(--green);box-shadow:0 0 0 0 rgba(61,220,132,.7);animation:pulse 1.6s infinite}
+  .badge.live{color:var(--green);border-color:#204a35}
+  .badge.demo .dot{background:var(--amber)}
+  .badge.demo{color:var(--amber);border-color:#4a3a1a}
+  .badge.err .dot{background:var(--red)}
+  .badge.err{color:var(--red);border-color:#4a2030}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,132,.6)}70%{box-shadow:0 0 0 7px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+
+  .rules{color:var(--muted);font-size:12.5px;margin:8px 0 26px}
+  .rules b{color:var(--cyan)}
+
+  .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:3px;margin-bottom:6px}
+  .counter{font-size:clamp(44px,11vw,120px);font-weight:800;line-height:1;
+    color:#fff;text-shadow:0 0 34px rgba(34,211,238,.4);font-variant-numeric:tabular-nums;margin:2px 0;
+    display:flex;justify-content:center;align-items:center}
+  .counter .grp{color:var(--cyan)}
+  .reel{display:inline-block;height:1em;line-height:1;overflow:hidden;width:.60em;text-align:center}
+  .reel .strip{display:block;will-change:transform}
+  .reel .strip span{display:block;height:1em;line-height:1}
+  .comma{display:inline-block;width:.26em;text-align:center}
+  .updated{color:var(--muted);font-size:12px;margin-top:14px}
+
+  .bar{height:8px;background:#0c0c14;border-radius:20px;margin:26px auto 6px;max-width:560px;overflow:hidden;border:1px solid var(--line)}
+  .fill{height:100%;background:linear-gradient(90deg,var(--red),var(--cyan));width:0.5%;border-radius:20px;box-shadow:0 0 12px rgba(34,211,238,.6);transition:width .6s ease}
+  .barcap{color:var(--muted);font-size:11.5px}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 8px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 12px}
+  .stat .k{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:1px}
+  .stat .v{font-size:26px;font-weight:800;margin-top:5px;font-variant-numeric:tabular-nums}
+  .stat .s{color:#c9ccd8;font-size:12.5px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+  .stat .s.neg,.stat .v.neg{color:var(--red)}
+
+  .watchcard{display:flex;align-items:center;gap:14px;max-width:520px;margin:22px auto 0;text-decoration:none;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;transition:border-color .15s}
+  .watchcard:hover{border-color:var(--red)}
+  .watchcard .thumb{position:relative;flex:0 0 auto;width:132px;height:74px;border-radius:10px;overflow:hidden;background:#000}
+  .watchcard .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .watchcard .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+  .watchmeta{text-align:left;min-width:0}
+  .watchmeta .wlabel{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1.2px}
+  .watchmeta .wtitle{color:var(--txt);font-size:15px;font-weight:700;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:330px}
+  .watchmeta .wcta{color:var(--red);font-size:12.5px;font-weight:700}
+  .archive{max-width:560px;margin:16px auto 0}
+  .archive .arclabel{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;text-align:center}
+  .arcrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .arcrow a{position:relative;width:86px;height:48px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#000;flex:0 0 auto}
+  .arcrow a img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85}
+  .arcrow a:hover img{opacity:1}
+  .arcrow a span{position:absolute;left:5px;bottom:3px;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 3px #000}
+
+  .cta{display:block;max-width:640px;margin:26px auto 4px;text-decoration:none;text-align:center;
+    background:linear-gradient(90deg,var(--red),#ff5a76);color:#fff;border-radius:20px;padding:22px 24px;
+    box-shadow:0 0 0 0 rgba(255,43,78,.55);animation:ctapulse 2.2s infinite;transition:transform .12s}
+  .cta:hover{transform:translateY(-2px)}
+  .cta:active{transform:translateY(0)}
+  .cta .ctamain{display:block;font-size:clamp(19px,3.6vw,28px);font-weight:800;letter-spacing:.3px;line-height:1.15}
+  .cta .ctasub{display:block;font-size:13px;font-weight:600;opacity:.92;margin-top:7px}
+  @keyframes ctapulse{0%{box-shadow:0 0 0 0 rgba(255,43,78,.55)}70%{box-shadow:0 0 0 18px rgba(255,43,78,0)}100%{box-shadow:0 0 0 0 rgba(255,43,78,0)}}
+  body.stream .cta{max-width:760px;margin-top:34px}
+
+  .controls{margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  button{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:9px 15px;border-radius:10px;
+    font-size:13px;font-weight:600;cursor:pointer}
+  button:hover{border-color:var(--cyan)}
+  button.primary{background:linear-gradient(90deg,var(--red),#ff5a76);border:none;color:#fff}
+
+  .setup{max-width:620px;margin:26px auto 0;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .setup summary{cursor:pointer;padding:16px 18px;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  .setup summary::-webkit-details-marker{display:none}
+  .setup summary .chev{color:var(--muted);transition:transform .2s}
+  .setup[open] summary .chev{transform:rotate(90deg)}
+  .setup .body{padding:0 18px 18px;color:var(--muted);font-size:13px;line-height:1.65}
+  .setup .body ol{margin:8px 0 8px 18px}
+  .setup .body li{margin:5px 0}
+  .setup code{background:#0b0b13;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--cyan);font-size:12px;word-break:break-all}
+  .setup .note{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12px}
+  .errbox{max-width:620px;margin:16px auto 0;background:#1b0f14;border:1px solid #4a2030;color:#ffb4c2;
+    border-radius:12px;padding:12px 16px;font-size:13px;display:none}
+  .foot{color:#4a4d60;font-size:11px;margin-top:26px;line-height:1.6}
+
+  /* Stream mode: hide everything but the counter for clean OBS capture */
+  body.stream{justify-content:center;padding:0}
+  body.stream .rules,body.stream .grid,body.stream .setup,body.stream .controls,body.stream .foot,body.stream .errbox,body.stream .watchcard,body.stream .archive{display:none!important}
+  body.stream .topbar{margin-bottom:14px}
+  body.stream .counter{font-size:clamp(60px,14vw,180px)}
+  body.stream .bar{max-width:680px}
+
+  @media(max-width:680px){.grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="arrow">▼</span><h1>1 BILLION TO <span class="z">0</span></h1></div>
+    <span class="badge" id="badge"><span class="dot"></span><span id="badgeText">connecting…</span></span>
+  </div>
+  <div class="rules"><b>1 Like = −1,000</b> &nbsp;·&nbsp; <b>1 Comment = −100</b> &nbsp;·&nbsp; reads YouTube's public API live, so anyone can verify the math</div>
+
+  <div class="label">Numbers Remaining</div>
+  <div class="counter" id="counter">1,000,000,000</div>
+  <div class="updated" id="updated">starting up…</div>
+
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="barcap"><span id="pct">0%</span> erased</div>
+
+  <a class="cta" id="ctaBtn" href="#" target="_blank" rel="noopener">
+    <span class="ctamain">👉 LIKE &amp; COMMENT TO MOVE THE NUMBER</span>
+    <span class="ctasub">on today's YouTube Short &nbsp;·&nbsp; every like −1,000 &nbsp;·&nbsp; every comment −100</span>
+  </a>
+
+  <div class="grid">
+    <div class="stat"><div class="k">Total Likes</div><div class="v" id="likes">—</div><div class="s neg" id="likesSub">−0</div></div>
+    <div class="stat"><div class="k">Total Comments</div><div class="v" id="comments">—</div><div class="s neg" id="commentsSub">−0</div></div>
+    <div class="stat"><div class="k">Subs + Raids</div><div class="v neg" id="bonuses">−0</div><div class="s">weekly bonuses</div></div>
+    <div class="stat"><div class="k">Erased So Far</div><div class="v" id="erased">0</div><div class="s">across <span id="dayNum">1</span> days</div></div>
+  </div>
+
+  <a class="watchcard" id="watchToday" href="#" target="_blank" rel="noopener">
+    <div class="thumb"><img id="todayThumb" alt="today's Short"><span class="play">▶</span></div>
+    <div class="watchmeta">
+      <div class="wlabel">Watch today's Short</div>
+      <div class="wtitle" id="todayTitle">1 Billion to 0</div>
+      <div class="wcta">Watch &amp; comment on YouTube ↗</div>
+    </div>
+  </a>
+
+  <div class="archive" id="archive" style="display:none">
+    <div class="arclabel">Past days</div>
+    <div class="arcrow" id="arcRow"></div>
+  </div>
+
+  <div class="errbox" id="errbox"></div>
+
+  <div class="foot" id="foot">All-time running counter. Self-updating: it automatically finds every daily Short on the channel and reads its live likes and comments from YouTube. Post a new day and it appears here on its own.</div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIG  —  self-updating. You normally never touch this.
+// ============================================================
+const CONFIG = {
+  apiKey: "__YT_API_KEY__",   // injected at deploy time from the YT_API_KEY GitHub secret
+
+  // The channel's permanent "uploads" playlist. Every video you post lands here
+  // automatically, so the counter discovers new daily Shorts with zero config.
+  uploadsPlaylistId: "UUWErqGZ5MJfgulXq7CS87EQ",
+  scanCount: 25,          // how many most-recent uploads to scan for daily Shorts
+
+  // A video counts as a daily Short if its title OR description matches this.
+  // The 📉 emoji / the brand name are on every countdown post and on nothing else,
+  // so unrelated uploads are ignored automatically.
+  matcher: /📉|1\s*billion\s*to\s*0|1billionto0|billion to zero/i,
+
+  start: 1000000000,
+  likeValue: 1000,
+  commentValue: 100,
+  pollSeconds: 30,             // re-read the live stats this often (1 quota unit)
+  playlistRefreshMinutes: 5,   // re-scan for brand-new daily Shorts this often
+
+  // Idle animation: keep the number visibly "alive" between real updates.
+  animateIdle: true,      // set false for a calm, static number
+  rerollSeconds: 6,       // re-spin the reels every N seconds
+  rollMs: 1100,           // base spin time per reel (staggered left-to-right)
+
+  // Optional manual bonuses: weekly subs milestones and raid payouts.
+  // Leave empty for pure auto. Add a line when you run one, e.g.:
+  //   { label: "subs week 1", amount: 200000 },   // 40 new subs x 5,000
+  //   { label: "raid aug 2",  amount: 50000 },
+  adjustments: []
+};
+// ============================================================
+
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('en-US');
+
+// weekly subs milestones + raid payouts, applied by hand via CONFIG.adjustments
+function adjustmentsSubtract(){
+  return CONFIG.adjustments.reduce((s, a) => s + (a.amount || 0), 0);
+}
+
+function counterHTML(n){
+  const s = fmt(n); const parts = s.split(',');
+  if(parts.length<=1) return s;
+  const last = parts.pop();
+  return parts.join(',') + ',<span class="grp">' + last + '</span>';
+}
+
+// ---- true slot-machine reels: each digit spins on its own column and lands on the real number ----
+const COUNTER = $('counter');
+let reels = [], builtStr = '', currentTarget = CONFIG.start, rolling = false;
+const SPINS = 8;
+
+function buildReels(str){
+  COUNTER.innerHTML = '';
+  reels = [];
+  const lastComma = str.lastIndexOf(',');
+  [...str].forEach((ch, i) => {
+    if(ch === ','){
+      const c = document.createElement('span'); c.className = 'comma'; c.textContent = ','; COUNTER.appendChild(c);
+    } else {
+      const reel = document.createElement('span'); reel.className = 'reel';
+      if(i > lastComma) reel.classList.add('grp');
+      const strip = document.createElement('span'); strip.className = 'strip';
+      for(let k = 0; k < 100; k++){ const d = document.createElement('span'); d.textContent = k % 10; strip.appendChild(d); }
+      reel.appendChild(strip); COUNTER.appendChild(reel);
+      reels.push({ reel, strip, digit: parseInt(ch, 10) });
+    }
+  });
+  builtStr = str;
+  reels.forEach(r => { const h = r.reel.clientHeight; r.strip.style.transform = `translateY(${-r.digit*h}px)`; });
+}
+
+function spinReels(str){
+  if(str.length !== builtStr.length) buildReels(str);
+  const digits = [...str].filter(c => c !== ',').map(c => parseInt(c, 10));
+  reels.forEach((r, idx) => {
+    const target = digits[idx];
+    const h = r.reel.clientHeight;
+    r.strip.style.transition = 'none';
+    r.strip.style.transform = `translateY(${-r.digit*h}px)`;   // snap to base
+    void r.strip.offsetHeight;                                  // force reflow
+    const dur = (CONFIG.rollMs || 1100) + idx * 120;            // stagger so reels stop left-to-right
+    r.strip.style.transition = `transform ${dur}ms cubic-bezier(.33,.08,.24,1)`;
+    r.strip.style.transform = `translateY(${-(SPINS*10 + target)*h}px)`;
+    const onEnd = () => {
+      r.strip.style.transition = 'none';
+      r.strip.style.transform = `translateY(${-target*h}px)`;   // snap to base for the next spin
+      r.digit = target;
+      r.strip.removeEventListener('transitionend', onEnd);
+    };
+    r.strip.addEventListener('transitionend', onEnd);
+  });
+}
+
+function requestRoll(total){
+  currentTarget = total;
+  if(rolling) return;
+  rolling = true;
+  const str = fmt(Math.round(total));
+  spinReels(str);
+  const n = str.replace(/,/g, '').length;
+  setTimeout(() => { rolling = false; }, (CONFIG.rollMs || 1100) + (n-1)*120 + 200);
+}
+
+// idle re-spin so the reels keep moving and stay engaging even when likes are slow
+setInterval(() => {
+  if(CONFIG.animateIdle && !rolling) requestRoll(currentTarget);
+}, (CONFIG.rerollSeconds || 6) * 1000);
+
+function setBadge(state, text){
+  const b = $('badge');
+  b.className = 'badge ' + state;
+  $('badgeText').textContent = text;
+}
+
+const shortUrl = id => `https://youtube.com/shorts/${id}`;
+const thumbUrl = id => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+// dayOf: pull "day N" out of a title/description so we can order + label the Shorts
+function dayOf(item){
+  const s = ((item.snippet && item.snippet.title) || '') + ' ' + ((item.snippet && item.snippet.description) || '');
+  const m = s.match(/day\s*(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+function isDaily(item){
+  const t = (item.snippet && item.snippet.title) || '';
+  const d = (item.snippet && item.snippet.description) || '';
+  return CONFIG.matcher.test(t) || CONFIG.matcher.test(d);
+}
+
+// render off the FULL set of daily Shorts (summed live), plus manual bonuses
+function render(daily, live){
+  let totalLikes = 0, totalComments = 0;
+  daily.forEach(v => { totalLikes += v.likes; totalComments += v.comments; });
+  const drop = totalLikes*CONFIG.likeValue + totalComments*CONFIG.commentValue;
+  const bonuses = adjustmentsSubtract();
+  const total = CONFIG.start - drop - bonuses;
+  requestRoll(total);
+  const erased = CONFIG.start - total;
+  $('erased').textContent = fmt(erased);
+  $('likes').textContent = fmt(totalLikes);
+  $('comments').textContent = fmt(totalComments);
+  $('likesSub').textContent = '−' + fmt(totalLikes*CONFIG.likeValue);
+  $('commentsSub').textContent = '−' + fmt(totalComments*CONFIG.commentValue);
+  $('bonuses').textContent = '−' + fmt(bonuses);
+  $('dayNum').textContent = daily.length || 0;
+  const pct = erased / CONFIG.start * 100;
+  $('pct').textContent = pct < 0.01 ? pct.toFixed(5)+'%' : pct.toFixed(2)+'%';
+  $('fill').style.width = Math.max(pct, 0.5) + '%';
+  const now = new Date();
+  $('updated').textContent = (live ? 'live · updated ' : 'preview · ') +
+    now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+// point the watch card + big CTA at TODAY (the newest daily Short), and fill the archive
+function paintCards(daily){
+  if(!daily.length) return;
+  const today = daily[0];               // daily[] is sorted newest-first
+  $('watchToday').href = shortUrl(today.id);
+  $('ctaBtn').href = shortUrl(today.id);
+  $('todayThumb').src = thumbUrl(today.id);
+  $('todayTitle').textContent = today.title || ('Day ' + (today.day || '') + ' · 1 Billion to 0');
+  const past = daily.slice(1);
+  if(past.length){
+    $('archive').style.display = 'block';
+    $('arcRow').innerHTML = past.map(v =>
+      `<a href="${shortUrl(v.id)}" target="_blank" rel="noopener"><img src="${thumbUrl(v.id)}" alt="day ${v.day||''}"><span>${v.day ? 'Day '+v.day : '↩'}</span></a>`
+    ).join('');
+  } else {
+    $('archive').style.display = 'none';
+  }
+}
+
+// ---- YouTube reads ----
+async function fetchUploadIds(){
+  const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=${CONFIG.scanCount}&playlistId=${CONFIG.uploadsPlaylistId}&key=${CONFIG.apiKey}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('playlist API ' + res.status + ' (check key / quota)');
+  const data = await res.json();
+  return (data.items || []).map(i => i.contentDetails.videoId).filter(Boolean);
+}
+async function fetchVideos(ids){
+  if(!ids.length) return [];
+  const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids.join(',')}&key=${CONFIG.apiKey}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('videos API ' + res.status + ' (check key / quota)');
+  const data = await res.json();
+  return data.items || [];
+}
+
+// turn raw API items into the sorted daily-Short list the UI needs
+function buildDaily(items){
+  const daily = items.filter(isDaily).map(it => ({
+    id: it.id,
+    title: (it.snippet && it.snippet.title) || '',
+    day: dayOf(it),
+    likes: parseInt((it.statistics && it.statistics.likeCount) || '0', 10),
+    comments: parseInt((it.statistics && it.statistics.commentCount) || '0', 10)
+  }));
+  // newest first: by day number when known, else keep upload order (already newest-first)
+  daily.sort((a, b) => {
+    if(a.day != null && b.day != null) return b.day - a.day;
+    if(a.day != null) return -1;
+    if(b.day != null) return 1;
+    return 0;
+  });
+  return daily;
+}
+
+let uploadIds = [];
+let lastPlaylistScan = 0;
+let everLive = false;
+
+async function live(){
+  try{
+    const now = performance.now();
+    // re-scan the uploads playlist on first run and every few minutes, to catch new days
+    if(!uploadIds.length || now - lastPlaylistScan > CONFIG.playlistRefreshMinutes*60*1000){
+      uploadIds = await fetchUploadIds();
+      lastPlaylistScan = now;
+    }
+    const items = await fetchVideos(uploadIds);
+    const daily = buildDaily(items);
+    everLive = true;
+    setBadge('live', daily.length ? 'live · ' + daily.length + ' days' : 'live');
+    $('errbox').style.display = 'none';
+    paintCards(daily);
+    render(daily, true);
+  }catch(e){
+    setBadge('err', 'offline');
+    const box = $('errbox'); box.style.display = 'block';
+    box.textContent = "Can't reach YouTube right now. If you're viewing this inside an app preview, live calls are blocked — open the .html directly in a browser. " + e.message;
+    if(!everLive) render([], false);
+  }
+}
+
+function start(){
+  render([], false);            // show the full billion baseline instantly, before any network call
+  const hasKey = CONFIG.apiKey && CONFIG.apiKey.trim().length > 10;
+  if(hasKey){
+    setBadge('live', 'connecting…');
+    live();
+    setInterval(live, CONFIG.pollSeconds*1000);
+  }else{
+    setBadge('demo', 'add an API key');
+    render([], false);
+  }
+}
+
+// ---- stream mode via URL: load  .../?stream  for a clean, counter-only OBS layout ----
+if(location.search.includes('stream') || location.hash.includes('stream')) document.body.classList.add('stream');
+
+start();
+</script>
+</body>
+</html>
